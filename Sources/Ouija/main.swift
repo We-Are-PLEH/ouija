@@ -46,7 +46,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 body: value("body") ?? "",
                 sound: value("sound"),
                 thread: value("thread") ?? title,
-                action: action
+                action: action,
+                iconPath: value("icon").map { ($0 as NSString).expandingTildeInPath }
             )
         }
     }

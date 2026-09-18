@@ -7,6 +7,10 @@
     "blocked": { "title": "{title}", "subtitle": "{agent} · {session}", "body": "Necesita tu input" },
     "done":    { "title": "{title}", "subtitle": "{agent} · {session}", "body": "Turno terminado" }
   },
+  "agentIcons": {
+    "claude": "~/icons/claude.png",
+    "codex": "~/icons/codex.png"
+  },
   "startupGraceSeconds": 5,
   "terminalBundleID": "com.mitchellh.ghostty",
   "replyEnabled": true,
