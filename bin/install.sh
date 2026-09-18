@@ -30,5 +30,14 @@ LSREGISTER=/System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchSe
 [ -x "$LSREGISTER" ] && "$LSREGISTER" -f "$PREFIX/Ouija.app" || true
 
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
+
+# El CLI se copia, no se enlaza: un cron que lo invoque no debe depender de que
+# este repo siga donde esta. Es un script suelto que solo compone una URL.
+BINDIR="$HOME/.local/bin"
+mkdir -p "$BINDIR"
+cp "$ROOT/bin/ouija" "$BINDIR/ouija"
+chmod +x "$BINDIR/ouija"
+
 echo "instalado: $PREFIX/Ouija.app"
+echo "cli:       $BINDIR/ouija"
 echo "log:       $HOME/Library/Logs/Ouija/ouija.log"
