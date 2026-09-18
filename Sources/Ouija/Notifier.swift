@@ -41,6 +41,9 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     private let config: Config
     private let herdr: Herdr
+    private var authorizationWatch: Timer?
+    /// Ultimo aviso vivo por panel, para poder retirarlo cuando caduca.
+    private var delivered: [String: String] = [:]
 
     init(config: Config, herdr: Herdr) {
         self.config = config
@@ -64,11 +67,31 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
     }
 
     func requestAuthorization() {
-        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { granted, error in
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .sound]) { [weak self] granted, error in
             if let error { Log.error("permiso de notificaciones: \(error.localizedDescription)") }
             else if !granted { Log.error("permiso de notificaciones denegado; no habra avisos") }
-            else { Log.info("permiso de notificaciones concedido") }
+            else { Log.info("permiso de notificaciones concedido"); return }
+            // Denegado: el usuario puede concederlo luego en Ajustes del Sistema.
+            // Vigilarlo evita que haga falta reiniciar el agente para enterarse.
+            DispatchQueue.main.async { self?.watchAuthorization() }
         }
+    }
+
+    /// Relee el permiso cada 30 s mientras siga denegado, y lo anuncia en cuanto
+    /// cambia. Sin esto, conceder el permiso en Ajustes no surte efecto hasta el
+    /// siguiente arranque, y el fallo parece del programa.
+    private func watchAuthorization() {
+        guard authorizationWatch == nil else { return }
+        let t = Timer(timeInterval: 30, repeats: true) { timer in
+            UNUserNotificationCenter.current().getNotificationSettings { settings in
+                guard settings.authorizationStatus == .authorized ||
+                      settings.authorizationStatus == .provisional else { return }
+                Log.info("permiso de notificaciones concedido")
+                DispatchQueue.main.async { timer.invalidate() }
+            }
+        }
+        RunLoop.main.add(t, forMode: .common)
+        authorizationWatch = t
     }
 
     /// `threadIdentifier` agrupa por panel: N avisos del mismo sitio no llenan el
@@ -84,10 +107,25 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         if let sound, !sound.isEmpty {
             content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: "\(sound).aiff"))
         }
-        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil)
+        let id = UUID().uuidString
+        delivered[thread] = id
+        let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request) { error in
             if let error { Log.error("no se pudo publicar el aviso: \(error.localizedDescription)") }
         }
+    }
+
+    /// Retira el aviso vivo de un panel.
+    ///
+    /// Un «necesita tu input» que sigue en el centro de notificaciones despues de
+    /// que el panel haya seguido solo es peor que no avisar: te manda a mirar algo
+    /// que ya no esta esperandote.
+    func withdraw(thread: String) {
+        guard let id = delivered.removeValue(forKey: thread) else { return }
+        Log.info("retirado el aviso de \(thread): ya no describe la realidad")
+        let center = UNUserNotificationCenter.current()
+        center.removeDeliveredNotifications(withIdentifiers: [id])
+        center.removePendingNotificationRequests(withIdentifiers: [id])
     }
 
     // Sin esto, un aviso llegado mientras la app esta activa no se muestra.
@@ -145,6 +183,12 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
             env["PATH"] = "\(dir):\(env["PATH"] ?? "/usr/bin:/bin")"
         }
         p.environment = env
+        // El clic tiene que dejar rastro: sin esto, «no me ha llevado» y «no
+        // pulse bien» son indistinguibles en el log.
+        p.terminationHandler = { proc in
+            if proc.terminationStatus == 0 { Log.info("clic: foco a \(session) \(pane)") }
+            else { Log.error("clic: ouija-focus salio \(proc.terminationStatus) para \(session) \(pane)") }
+        }
         do { try p.run() } catch { Log.error("ouija-focus no arranco: \(error.localizedDescription)") }
     }
 

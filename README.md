@@ -44,10 +44,12 @@ herdr reports five agent states; two of them notify by default:
 | `done` | turn finished | yes |
 | `idle` / `working` / `unknown` | — | no |
 
-Two things keep it quiet. A notification is suppressed while you are already looking at that pane
-(the pane holds focus inside herdr **and** the terminal is the frontmost app), and a state must last
-`minStateSeconds` before it is announced — a permission prompt you answer in three seconds never
-makes a sound.
+Three things keep it honest. A notification is suppressed while you are already looking at that pane
+(the pane holds focus inside herdr **and** the terminal is the frontmost app); a state must last
+`minStateSeconds` before it is announced, so a permission prompt you answer in three seconds never
+makes a sound; and a notification is **withdrawn** as soon as its pane leaves the state that raised
+it. A stale "needs your input" sitting in Notification Center is worse than no notification at all —
+it sends you to look at something that carried on without you.
 
 ## Requirements
 
@@ -136,7 +138,17 @@ file is refreshed on a timer and can lag. `ouija-focus` falls back to finding th
 then to just activating the terminal.
 
 Nothing appears at all? Confirm the app has notification permission in System Settings, and that a
-Focus mode isn't routing it silently to Notification Center.
+Focus mode isn't routing it silently to Notification Center. Granting permission later needs no
+restart: while it is denied, Ouija rechecks every 30 seconds and logs the moment it is granted.
+
+The log records what the click did, so "it didn't take me anywhere" and "I mis-clicked" are
+distinguishable:
+
+```
+00:10:56  INFO  clic: foco a default w3:p1C
+00:11:18  INFO  prompt enviado a default w3:p12
+00:11:18  INFO  retirado el aviso de default|w3:p12: ya no describe la realidad
+```
 
 ## License
 

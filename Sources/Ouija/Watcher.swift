@@ -54,6 +54,9 @@ final class Watcher {
                     || agent.seq > previous!.seq
 
                 if changed {
+                    // El aviso anterior de este panel ya no describe la realidad:
+                    // fuera del centro de notificaciones antes de publicar nada.
+                    if previous != nil { notifier.withdraw(thread: key) }
                     // Transicion: empieza a contar el tiempo en el estado nuevo.
                     // Un aviso pendiente del estado anterior se descarta aqui, que
                     // es justo lo que queremos: si lo resolviste, no suena.
@@ -76,7 +79,9 @@ final class Watcher {
                 announce(agent, session: session)
             }
         }
-        // Paneles cerrados: fuera del mapa, que si no crece sin fin.
+        // Paneles cerrados: fuera del mapa, que si no crece sin fin, y sin dejar
+        // atras un aviso que apunta a un panel que ya no existe.
+        for key in seen.keys where !alive.contains(key) { notifier.withdraw(thread: key) }
         seen = seen.filter { alive.contains($0.key) }
     }
 
