@@ -65,6 +65,9 @@ bin/install.sh    # copies to ~/Library/Application Support/Ouija/ and loads the
 bin/uninstall.sh  # removes both
 ```
 
+`install.sh` also copies the `ouija` CLI to `~/.local/bin/`, so cron jobs and LaunchAgents can send
+notifications without knowing where this repo lives.
+
 The app is installed **outside** the repo: launchd cannot read every path (cloud-synced folders,
 external volumes) and the repo may move.
 
@@ -118,9 +121,12 @@ not read is a bad idea — go to the pane and read it. Set `"replyEnabled": fals
 ## Notifications from your own scripts
 
 ```sh
-bin/ouija send --title "daily audit" --body "3 repos need a look" --open ~/.cache/audit/
-bin/ouija send --title "Worker stuck" --session my-workers --pane w1:p3
+ouija send --title "daily audit" --body "3 repos need a look" --open ~/.cache/audit/
+ouija send --title "Worker stuck" --session my-workers --pane w1:p3
 ```
+
+Under launchd or cron, call it by absolute path — `$HOME/.local/bin/ouija` — since neither inherits
+your shell's `PATH`.
 
 With `--open` the click opens a path or a URL; with `--session`/`--pane`, it goes to the pane. This
 is the replacement for `osascript -e 'display notification …'` in cron jobs and LaunchAgents.
