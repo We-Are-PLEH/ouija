@@ -96,7 +96,8 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
 
     /// `threadIdentifier` agrupa por panel: N avisos del mismo sitio no llenan el
     /// centro de notificaciones con filas sueltas.
-    func post(title: String, subtitle: String, body: String, sound: String?, thread: String, action: ClickAction) {
+    func post(title: String, subtitle: String, body: String, sound: String?, thread: String,
+              action: ClickAction, iconPath: String? = nil) {
         let content = UNMutableNotificationContent()
         content.title = title
         if !subtitle.isEmpty { content.subtitle = subtitle }
@@ -104,6 +105,7 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         content.threadIdentifier = thread
         content.userInfo = action.userInfo
         if case .focus = action, config.replyEnabled { content.categoryIdentifier = Self.agentCategory }
+        if let iconPath, let attachment = Self.attachment(at: iconPath) { content.attachments = [attachment] }
         if let sound, !sound.isEmpty {
             content.sound = UNNotificationSound(named: UNNotificationSoundName(rawValue: "\(sound).aiff"))
         }
@@ -112,6 +114,25 @@ final class Notifier: NSObject, UNUserNotificationCenterDelegate {
         let request = UNNotificationRequest(identifier: id, content: content, trigger: nil)
         UNUserNotificationCenter.current().add(request) { error in
             if let error { Log.error("no se pudo publicar el aviso: \(error.localizedDescription)") }
+        }
+    }
+
+    /// Adjunta una imagen al aviso.
+    ///
+    /// `UNNotificationAttachment` **mueve** el fichero a su almacen, asi que se
+    /// adjunta siempre una copia temporal: adjuntar el original se lo llevaria de
+    /// donde este —el favicon del vault, por ejemplo— sin avisar.
+    private static func attachment(at path: String) -> UNNotificationAttachment? {
+        let source = URL(fileURLWithPath: path)
+        let copy = FileManager.default.temporaryDirectory
+            .appendingPathComponent("ouija-\(UUID().uuidString).\(source.pathExtension)")
+        do {
+            try FileManager.default.copyItem(at: source, to: copy)
+            return try UNNotificationAttachment(identifier: "icon", url: copy, options: nil)
+        } catch {
+            Log.error("no se pudo adjuntar \(path): \(error.localizedDescription)")
+            try? FileManager.default.removeItem(at: copy)
+            return nil
         }
     }
 

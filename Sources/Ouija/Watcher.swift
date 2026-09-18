@@ -113,7 +113,8 @@ final class Watcher {
             body: text.body,
             sound: config.sounds[agent.status],
             thread: agent.key(session: session.name),
-            action: .focus(session: session.name, pane: agent.paneID)
+            action: .focus(session: session.name, pane: agent.paneID),
+            iconPath: config.icon(for: agent.agent)
         )
     }
 }

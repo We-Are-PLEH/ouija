@@ -91,6 +91,7 @@ Automation prompt can come back after a reinstall.
 | `templates` | see below | notification text per state |
 | `startupGraceSeconds` | `5` | quiet window after launch, so the first sample doesn't fire a burst |
 | `terminalBundleID` | `com.mitchellh.ghostty` | which frontmost app counts as "you're already looking at it" |
+| `agentIcons` | `{}` | per-agent image attached to the notification, e.g. `{"claude": "~/icons/claude.png"}` |
 | `replyEnabled` | `true` | show a text field on agent notifications |
 | `replyButtonTitle` | `"Responder"` | label of that field's send button |
 | `focusScript` | the bundled one | alternative path to `ouija-focus` |
@@ -110,6 +111,17 @@ directory:
 No session name and no tab id appear anywhere in the code: sessions come from
 `herdr session list --json`, tabs from `~/.config/herdr/ghostty-tab-map.json`.
 
+### Icons
+
+Two different things. The **app icon** (`Resources/AppIcon.icns`, rebuilt from `icon-source.png` with
+`bin/make-icon.sh`) is what macOS puts next to the app name on every notification — the identity of
+the sender. The **attachment** is a thumbnail on the right, set per agent through `agentIcons`, so a
+glance tells you whether it was Claude, Codex or a stuck worker.
+
+`agentIcons` ships empty and no third-party logo is distributed here: point it at your own files.
+The image is copied before it is attached, because `UNNotificationAttachment` *moves* the file you
+hand it into its own store — attaching an original would take it out of wherever it lives.
+
 ## Replying without leaving what you're doing
 
 Agent notifications carry a text field. What you type is sent with `herdr agent prompt`, so you can
@@ -122,7 +134,7 @@ not read is a bad idea — go to the pane and read it. Set `"replyEnabled": fals
 
 ```sh
 ouija send --title "daily audit" --body "3 repos need a look" --open ~/.cache/audit/
-ouija send --title "Worker stuck" --session my-workers --pane w1:p3
+ouija send --title "Worker stuck" --session my-workers --pane w1:p3 --icon ~/icons/codex.png
 ```
 
 Under launchd or cron, call it by absolute path — `$HOME/.local/bin/ouija` — since neither inherits
