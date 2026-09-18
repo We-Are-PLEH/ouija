@@ -1,0 +1,47 @@
+name: assets
+
+# Compila Resources/Ouija.xcassets en un Assets.car y lo publica como artefacto.
+#
+# macOS 26 lee el icono de las notificaciones del Assets.car (CFBundleIconName);
+# el .icns solo cubre Finder y versiones anteriores. actool va con Xcode completo,
+# que no esta en las Command Line Tools, asi que se compila aqui y el .car se
+# versiona en el repo.
+#
+# Lanzar a mano tras cambiar el icono:  gh workflow run assets
+# Bajar el resultado:                   gh run download <run-id> -n Assets.car -D Resources/
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compile:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Which Xcode
+        run: xcodebuild -version && xcrun -f actool
+
+      - name: Compile the asset catalog
+        run: |
+          set -eu
+          mkdir -p out
+          xcrun actool Resources/Ouija.xcassets \
+            --compile out \
+            --platform macosx \
+            --minimum-deployment-target 13.0 \
+            --app-icon AppIcon \
+            --output-partial-info-plist out/partial.plist
+          ls -l out
+
+      - name: The catalog carries the icon
+        run: |
+          set -eu
+          test -f out/Assets.car
+          grep -q CFBundleIconName out/partial.plist
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Assets.car
+          path: out/Assets.car
+          if-no-files-found: error

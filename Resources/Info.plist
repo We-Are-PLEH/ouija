@@ -8,10 +8,10 @@
   <key>CFBundleExecutable</key>      <string>Ouija</string>
   <key>CFBundlePackageType</key>     <string>APPL</string>
   <key>CFBundleShortVersionString</key> <string>0.1.0</string>
-  <key>CFBundleVersion</key>         <string>1</string>
+  <key>CFBundleVersion</key>         <string>2</string>
   <key>LSMinimumSystemVersion</key>  <string>13.0</string>
   <!-- El icono del bundle es el que macOS pone en cada notificacion. -->
-  <key>CFBundleIconFile</key>        <string>AppIcon</string>
+  <key>CFBundleIconFile</key>        <string>AppIcon.icns</string>
   <!-- Agente de fondo: sin icono en el Dock y sin menu. -->
   <key>LSUIElement</key>             <true/>
   <!-- El clic en la notificacion lanza osascript contra el terminal: macOS pide
