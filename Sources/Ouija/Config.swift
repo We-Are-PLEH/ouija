@@ -48,6 +48,10 @@ struct Config {
     /// y este dice de que agente se trata. Rutas locales, admiten `~`.
     /// Vacio por defecto: el repo no distribuye logotipos ajenos.
     var agentIcons: [String: String] = [:]
+    /// Imagen para todo lo que no tenga la suya. En la practica es la marca del
+    /// aviso: el hueco del icono de la app se queda en blanco en un bundle
+    /// firmado ad-hoc, asi que el adjunto es el unico sitio donde se ve un logo.
+    var defaultIcon: String = ""
     /// Ofrecer un campo de texto en la notificacion que manda el prompt al agente.
     var replyEnabled: Bool = true
     var replyButtonTitle: String = "Responder"
@@ -80,6 +84,7 @@ struct Config {
         if let v = raw["startupGraceSeconds"] as? Double, v >= 0 { cfg.startupGraceSeconds = v }
         if let v = raw["terminalBundleID"] as? String, !v.isEmpty { cfg.terminalBundleID = v }
         if let v = raw["agentIcons"] as? [String: String] { cfg.agentIcons = v }
+        if let v = raw["defaultIcon"] as? String { cfg.defaultIcon = v }
         if let v = raw["replyEnabled"] as? Bool { cfg.replyEnabled = v }
         if let v = raw["replyButtonTitle"] as? String, !v.isEmpty { cfg.replyButtonTitle = v }
         if let v = raw["focusScript"] as? String, !v.isEmpty { cfg.focusScript = v }
@@ -99,10 +104,14 @@ struct Config {
 
     /// Icono de un agente, si esta configurado y el fichero sigue existiendo.
     func icon(for agent: String) -> String? {
-        guard let raw = agentIcons[agent], !raw.isEmpty else { return nil }
+        resolveIcon(agentIcons[agent], nombre: agent) ?? resolveIcon(defaultIcon, nombre: "defaultIcon")
+    }
+
+    private func resolveIcon(_ raw: String?, nombre: String) -> String? {
+        guard let raw, !raw.isEmpty else { return nil }
         let path = (raw as NSString).expandingTildeInPath
         guard FileManager.default.fileExists(atPath: path) else {
-            Log.error("el icono de '\(agent)' no existe: \(path)")
+            Log.error("el icono de '\(nombre)' no existe: \(path)")
             return nil
         }
         return path

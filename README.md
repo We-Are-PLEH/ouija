@@ -92,6 +92,7 @@ Automation prompt can come back after a reinstall.
 | `startupGraceSeconds` | `5` | quiet window after launch, so the first sample doesn't fire a burst |
 | `terminalBundleID` | `com.mitchellh.ghostty` | which frontmost app counts as "you're already looking at it" |
 | `agentIcons` | `{}` | per-agent image attached to the notification, e.g. `{"claude": "~/icons/claude.png"}` |
+| `defaultIcon` | `""` | image attached when the agent has none of its own — in practice, your brand |
 | `replyEnabled` | `true` | show a text field on agent notifications |
 | `replyButtonTitle` | `"Responder"` | label of that field's send button |
 | `focusScript` | the bundled one | alternative path to `ouija-focus` |
@@ -113,14 +114,32 @@ No session name and no tab id appear anywhere in the code: sessions come from
 
 ### Icons
 
-Two different things. The **app icon** (`Resources/AppIcon.icns`, rebuilt from `icon-source.png` with
-`bin/make-icon.sh`) is what macOS puts next to the app name on every notification — the identity of
-the sender. The **attachment** is a thumbnail on the right, set per agent through `agentIcons`, so a
-glance tells you whether it was Claude, Codex or a stuck worker.
+A notification has two image slots. The **attachment** is the thumbnail on the right: set it per
+agent through `agentIcons`, with `defaultIcon` for everything else, so a glance tells you whether it
+was Claude, Codex or a stuck worker. Both ship empty and no third-party logo is distributed here —
+point them at your own files.
 
-`agentIcons` ships empty and no third-party logo is distributed here: point it at your own files.
 The image is copied before it is attached, because `UNNotificationAttachment` *moves* the file you
-hand it into its own store — attaching an original would take it out of wherever it lives.
+hand it into its own store; attaching an original would take it out of wherever it lives.
+
+The other slot is the **app icon**, next to the app name. It stays blank here, and the attachment is
+the reason `defaultIcon` exists.
+
+> **Known limitation — the app icon slot is blank.**
+> The bundle carries both `AppIcon.icns` (`CFBundleIconFile`) and an `actool`-compiled `Assets.car`
+> (`CFBundleIconName`), and Finder renders the icon correctly. Notification Center still draws a
+> blank square. What was ruled out by testing, on macOS 26.5.2: the `.icns` alone; the asset
+> catalog; *another app's* asset catalog dropped into the bundle; running from `/Applications`
+> instead of `~/Library/Application Support`; a fresh bundle identifier; purging the IconServices
+> caches and restarting `iconservicesagent`, `usernoted`, `NotificationCenter` and the Dock; and
+> adding the standard keys a hand-rolled bundle misses (`NSPrincipalClass`,
+> `CFBundleInfoDictionaryVersion`, `CFBundleSupportedPlatforms`, `CFBundleDevelopmentRegion`,
+> `LSApplicationCategoryType`) plus a `PkgInfo` file. A notification posted by another app in the
+> same session shows its icon, so the system itself is fine.
+>
+> The one structural difference left is the signature: this bundle is ad-hoc signed (`codesign -s -`)
+> rather than Developer ID. Untested — it needs a certificate. If you build Ouija with a real
+> signing identity and the icon appears, please open an issue and say so.
 
 ## Replying without leaving what you're doing
 
