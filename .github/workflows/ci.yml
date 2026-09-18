@@ -1,0 +1,41 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  check:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shell scripts parse
+        run: |
+          set -eu
+          for f in bin/build.sh bin/install.sh bin/uninstall.sh bin/ouija bin/ouija-focus; do
+            sh -n "$f"
+            echo "ok  $f"
+          done
+
+      - name: Property lists are valid
+        run: |
+          set -eu
+          plutil -lint Resources/Info.plist
+          plutil -lint launchd/com.wearepleh.ouija.plist.in
+
+      - name: Example config is valid JSON
+        run: python3 -c "import json;json.load(open('config/config.example.json'))"
+
+      # Builds and ad-hoc signs the real bundle, the same way bin/install.sh does,
+      # so a broken build cannot reach main.
+      - name: Build the app bundle
+        run: bin/build.sh
+
+      - name: Bundle has what it needs
+        run: |
+          set -eu
+          test -x build/Ouija.app/Contents/MacOS/Ouija
+          test -x build/Ouija.app/Contents/Resources/ouija-focus
+          codesign --verify --verbose build/Ouija.app
