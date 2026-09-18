@@ -1,0 +1,14 @@
+{
+  "pollSeconds": 1.5,
+  "notifyStates": ["blocked", "done"],
+  "minStateSeconds": { "blocked": 5, "done": 0 },
+  "sounds": { "blocked": "Ping", "done": "Glass" },
+  "templates": {
+    "blocked": { "title": "{title}", "subtitle": "{agent} · {session}", "body": "Necesita tu input" },
+    "done":    { "title": "{title}", "subtitle": "{agent} · {session}", "body": "Turno terminado" }
+  },
+  "startupGraceSeconds": 5,
+  "terminalBundleID": "com.mitchellh.ghostty",
+  "replyEnabled": true,
+  "replyButtonTitle": "Responder"
+}

@@ -1,0 +1,108 @@
+#!/bin/sh
+# ouija-focus — lleva el foco al pane exacto de un agente de herdr.
+#
+#   ouija-focus --session <nombre> --pane <pane_id>
+#
+# Dos saltos, en este orden:
+#   1. herdr: enfoca el pane dentro de su sesion (por socket, no por --session,
+#      porque `herdr --session X` arranca/adjunta en vez de hablar con la API).
+#   2. Ghostty: selecciona la pestana que hospeda a esa sesion y le da el foco,
+#      trayendo su ventana al frente.
+#
+# Sin el paso 1 aterrizas en la pestana correcta pero en el pane equivocado;
+# sin el paso 2 el foco cambia dentro de una pestana que no estas mirando.
+set -eu
+
+CONFIG_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/herdr"
+TAB_MAP="$CONFIG_DIR/ghostty-tab-map.json"
+TITLE_MAP="$CONFIG_DIR/ghostty-tab-titles.json"
+
+SESSION=""; PANE=""; VERBOSE=0
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --session) SESSION="${2:?falta el nombre de sesion}"; shift 2 ;;
+    --pane)    PANE="${2:?falta el pane_id}"; shift 2 ;;
+    -v|--verbose) VERBOSE=1; shift ;;
+    -h|--help) sed -n '2,12p' "$0"; exit 0 ;;
+    *) echo "ouija-focus: argumento desconocido: $1" >&2; exit 2 ;;
+  esac
+done
+[ -n "$SESSION" ] || { echo "ouija-focus: falta --session" >&2; exit 2; }
+[ -n "$PANE" ]    || { echo "ouija-focus: falta --pane" >&2; exit 2; }
+
+say() { [ "$VERBOSE" = 1 ] && echo "ouija-focus: $*" >&2 || true; }
+
+# --- 1. socket de la sesion, derivado de herdr, nunca compuesto a mano --------
+SOCKET=$(herdr session list --json 2>/dev/null | /usr/bin/python3 -c '
+import json,sys
+name=sys.argv[1]
+for s in json.load(sys.stdin).get("sessions",[]):
+    if s.get("name")==name and s.get("running"):
+        print(s.get("socket_path","")); break
+' "$SESSION")
+[ -n "$SOCKET" ] || { echo "ouija-focus: sesion '$SESSION' no esta viva" >&2; exit 1; }
+say "socket=$SOCKET"
+
+# --- 2. foco dentro de herdr -------------------------------------------------
+HERDR_SOCKET_PATH="$SOCKET" herdr agent focus "$PANE" >/dev/null 2>&1 \
+  || { echo "ouija-focus: herdr agent focus '$PANE' fallo" >&2; exit 1; }
+say "herdr agent focus $PANE ok"
+
+# --- 3. id de la pestana de Ghostty -----------------------------------------
+# Cascada: id del mapa -> coincidencia por nombre de pestana -> solo activate.
+TAB_ID=""
+[ -f "$TAB_MAP" ] && TAB_ID=$(/usr/bin/python3 -c '
+import json,sys
+try: print(json.load(open(sys.argv[1])).get(sys.argv[2],""))
+except Exception: print("")
+' "$TAB_MAP" "$SESSION")
+
+if [ -n "$TAB_ID" ] && ! /usr/bin/osascript -e 'tell application "Ghostty" to return id of every tab of every window' 2>/dev/null | grep -q "$TAB_ID"; then
+  say "el id '$TAB_ID' ya no existe; caduco"
+  TAB_ID=""
+fi
+
+if [ -z "$TAB_ID" ] && [ -f "$TITLE_MAP" ]; then
+  WANT=$(/usr/bin/python3 -c '
+import json,sys
+try: print(json.load(open(sys.argv[1])).get(sys.argv[2],""))
+except Exception: print("")
+' "$TITLE_MAP" "$SESSION")
+  if [ -n "$WANT" ]; then
+    TAB_ID=$(/usr/bin/osascript 2>/dev/null <<AS || true
+tell application "Ghostty"
+  repeat with w in windows
+    repeat with t in tabs of w
+      if (title of t) contains "$WANT" then return id of t
+    end repeat
+  end repeat
+  return ""
+end tell
+AS
+)
+    say "id recuperado por titulo '$WANT': ${TAB_ID:-ninguno}"
+  fi
+fi
+
+# --- 4. foco en Ghostty ------------------------------------------------------
+if [ -n "$TAB_ID" ]; then
+  /usr/bin/osascript >/dev/null 2>&1 <<AS || true
+tell application "Ghostty"
+  activate
+  repeat with w in windows
+    repeat with t in tabs of w
+      if (id of t) is "$TAB_ID" then
+        select tab t
+        focus (focused terminal of t)
+        return "ok"
+      end if
+    end repeat
+  end repeat
+  return ""
+end tell
+AS
+  say "ghostty: pestana $TAB_ID enfocada"
+else
+  /usr/bin/osascript -e 'tell application "Ghostty" to activate' >/dev/null 2>&1 || true
+  say "ghostty: sin id de pestana, solo activate"
+fi

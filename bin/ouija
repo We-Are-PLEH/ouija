@@ -1,0 +1,40 @@
+#!/bin/sh
+# ouija — manda un aviso nativo clicable a traves de Ouija.app.
+#
+#   ouija send --title T [--body B] [--subtitle S] [--sound NOMBRE]
+#              [--open RUTA|URL | --session NOMBRE --pane PANE_ID]
+#
+# Sustituye a `osascript -e 'display notification …'`, que macOS atribuye a
+# Script Editor y cuyo clic no lleva a ninguna parte.
+set -eu
+
+[ "${1:-}" = "send" ] || { sed -n '2,9p' "$0"; exit 2; }
+shift
+
+TITLE=""; BODY=""; SUBTITLE=""; SOUND=""; OPEN=""; SESSION=""; PANE=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --title)    TITLE="${2:?}";    shift 2 ;;
+    --body)     BODY="${2:?}";     shift 2 ;;
+    --subtitle) SUBTITLE="${2:?}"; shift 2 ;;
+    --sound)    SOUND="${2:?}";    shift 2 ;;
+    --open)     OPEN="${2:?}";     shift 2 ;;
+    --session)  SESSION="${2:?}";  shift 2 ;;
+    --pane)     PANE="${2:?}";     shift 2 ;;
+    *) echo "ouija: argumento desconocido: $1" >&2; exit 2 ;;
+  esac
+done
+[ -n "$TITLE" ] || { echo "ouija: falta --title" >&2; exit 2; }
+
+esc() { /usr/bin/python3 -c 'import sys,urllib.parse;print(urllib.parse.quote(sys.argv[1],safe=""))' "$1"; }
+
+URL="ouija://send?title=$(esc "$TITLE")"
+[ -n "$BODY" ]     && URL="$URL&body=$(esc "$BODY")"
+[ -n "$SUBTITLE" ] && URL="$URL&subtitle=$(esc "$SUBTITLE")"
+[ -n "$SOUND" ]    && URL="$URL&sound=$(esc "$SOUND")"
+[ -n "$OPEN" ]     && URL="$URL&open=$(esc "$OPEN")"
+[ -n "$SESSION" ]  && URL="$URL&session=$(esc "$SESSION")"
+[ -n "$PANE" ]     && URL="$URL&pane=$(esc "$PANE")"
+
+# -g: no robar el foco al mandar el aviso.
+/usr/bin/open -g "$URL"

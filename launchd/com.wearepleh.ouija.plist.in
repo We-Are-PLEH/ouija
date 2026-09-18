@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>              <string>com.wearepleh.ouija</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>__PREFIX__/Ouija.app/Contents/MacOS/Ouija</string>
+  </array>
+  <key>RunAtLoad</key>          <true/>
+  <key>KeepAlive</key>          <true/>
+  <!-- launchd arranca con un PATH minimo y la app llama a herdr. -->
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>             <string>/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+  </dict>
+  <key>StandardOutPath</key>    <string>__HOME__/Library/Logs/Ouija/ouija.log</string>
+  <key>StandardErrorPath</key>  <string>__HOME__/Library/Logs/Ouija/ouija.log</string>
+</dict>
+</plist>
