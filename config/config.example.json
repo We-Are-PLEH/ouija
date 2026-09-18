@@ -11,6 +11,7 @@
     "claude": "~/icons/claude.png",
     "codex": "~/icons/codex.png"
   },
+  "defaultIcon": "~/icons/brand.png",
   "startupGraceSeconds": 5,
   "terminalBundleID": "com.mitchellh.ghostty",
   "replyEnabled": true,

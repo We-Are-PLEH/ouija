@@ -17,7 +17,11 @@ mkdir -p "$APP/Contents/MacOS" "$APP/Contents/Resources"
 swiftc -swift-version 5 -O -o "$APP/Contents/MacOS/Ouija" "$ROOT"/Sources/Ouija/*.swift
 
 cp "$ROOT/Resources/Info.plist" "$APP/Contents/Info.plist"
+# PkgInfo: lo pone Xcode siempre y algunos servicios del sistema lo esperan.
+printf "APPL????" > "$APP/Contents/PkgInfo"
 cp "$ROOT/Resources/AppIcon.icns" "$APP/Contents/Resources/AppIcon.icns"
+# macOS 26 saca de aqui el icono de las notificaciones; el .icns solo cubre Finder.
+cp "$ROOT/Resources/Assets.car" "$APP/Contents/Resources/Assets.car"
 # El script de foco viaja dentro del bundle: la app es autocontenida y no
 # depende de que el repo siga en su sitio.
 cp "$ROOT/bin/ouija-focus" "$APP/Contents/Resources/ouija-focus"
